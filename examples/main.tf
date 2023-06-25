@@ -16,6 +16,10 @@ terraform {
   required_version = ">= 1.5.1"
 }
 
+provider "aws" {
+  profile = "terraform-admin"
+}
+
 data "publicip_address" "source_v6" {
   source_ip = "::"
 }
@@ -23,27 +27,18 @@ data "publicip_address" "source_v6" {
 data "publicip_address" "source_v4" {
   source_ip = "0.0.0.0"
 }
-provider "aws" {
-  profile = "terraform-admin"
-}
 
 resource "random_pet" "mad_science" {
   keepers = { name = var.bucket_name }
 }
 
-# data "cloudflare_ip_ranges" "cloudflare" {}
 data "aws_canonical_user_id" "current" {}
-# data "aws_caller_identity" "current" {}
 data "aws_iam_role" "terraform_admin" {
   name = "terraform-admin"
 }
 data "aws_iam_user" "admin" {
   user_name = "Administrator"
 }
-locals {
-  # caller_arn           = "arn:aws:iam::${data.aws_caller_identity.current.account_id}"
-}
-
 
 locals {
   bucket_name = "${var.bucket_name}-${random_pet.mad_science.id}"
@@ -52,7 +47,6 @@ locals {
     data.publicip_address.source_v6.ip,
   ]
   # allowed_ips = var.allowed_ips
-  # cloudflare_ip_ranges = concat(data.cloudflare_ip_ranges.cloudflare.ipv4_cidr_blocks, data.cloudflare_ip_ranges.cloudflare.ipv6_cidr_blocks)
   owner_id = data.aws_canonical_user_id.current.id
   allowed_user_ids = [
     data.aws_iam_user.admin.user_id,
