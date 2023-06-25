@@ -20,7 +20,7 @@ variable "allowed_user_ids" {
 
 variable "owner_id" {
   type        = string
-  description = "The owner id"
+  description = "The owner id. Conflicts with acl."
   default     = ""
 }
 
@@ -76,5 +76,44 @@ variable "restrict_public_buckets" {
       including non-public delegation to specific accounts, is blocked. When set to true:
         Only the bucket owner and AWS Services can access this buckets if it has a public policy.
   EOF
+  default     = false
+}
+
+variable "versioning_enabled" {
+  type        = bool
+  description = <<EOF
+    The versioning_configuration configuration block supports the following arguments:
+      status - (Required) Versioning state of the bucket. Valid values: Enabled, Suspended, or Disabled. 
+        Disabled should only be used when creating or importing resources that correspond to unversioned S3 buckets.
+      mfa_delete - (Optional) Specifies whether MFA delete is enabled in the bucket versioning configuration. 
+        Valid values: Enabled or Disabled.
+  EOF
+  default     = true
+}
+
+variable "kms_key_arn" {
+  type        = string
+  description = "The ARN of the KMS key to use when encrypting objects in the bucket. If not provided, S3 will use AES-256 server-side encryption."
+  default     = ""
+}
+
+variable "acl" {
+  type        = string
+  description = <<EOF
+    (Optional) The canned ACL to apply. Defaults to "private". 
+      Conflicts with grant (owner_id). 
+      Valid values are private, public-read, public-read-write, aws-exec-read, authenticated-read, bucket-owner-read, 
+      bucket-owner-full-control and log-delivery-write.
+  EOF
+  default     = "private"
+  validation {
+    condition     = can(regex("^(private|public-read|public-read-write|aws-exec-read|authenticated-read|bucket-owner-read|bucket-owner-full-control|log-delivery-write)$", var.acl))
+    error_message = "Invalid ACL"
+  }
+}
+
+variable "force_destroy" {
+  type        = bool
+  description = "Whether all objects should be deleted from the bucket so that the bucket can be destroyed without error. These objects are not recoverable."
   default     = false
 }

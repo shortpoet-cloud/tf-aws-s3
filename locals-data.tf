@@ -25,13 +25,15 @@ locals {
   allowed_user_ids = var.allowed_user_ids
 
   public_read_get_object = {
-    Sid       = "PublicReadGetObject"
-    Effect    = "Allow"
-    Principal = "*"
-    Action    = "s3:GetObject"
+    Sid    = "PublicReadGetObject"
+    Effect = "Allow"
+    Action = "s3:GetObject"
     Resource = [
       "${aws_s3_bucket.s3.arn}/*",
     ],
+    Principal = {
+      AWS = "*"
+    }
     # Condition = {
     #   StringEquals = {
     #     "aws:Referer" = [
@@ -54,13 +56,15 @@ locals {
       aws_s3_bucket.s3.arn,
       "${aws_s3_bucket.s3.arn}/*",
     ]
+    Principal = {
+      AWS = "*"
+    }
     # NotPrincipal = {
     #   AWS = [
     #     "${local.caller_arn}:root",
     #     "${local.caller_arn}:user/Administrator",
     #   ]
     # }
-    Principal = "*"
     Condition = {
       NotIpAddress = {
         "aws:SourceIp" = local.allowed_ips
@@ -70,88 +74,57 @@ locals {
       }
     }
   }
-
-}
-data "aws_iam_policy_document" "prevent_unencrypted_uploads" {
-
-  statement {
-    sid = "DenyIncorrectEncryptionHeader"
-
-    effect = "Deny"
-
-    principals {
-      identifiers = ["*"]
-      type        = "AWS"
+  deny_incorrect_encryption_header = {
+    Sid    = "DenyIncorrectEncryptionHeader"
+    Effect = "Deny"
+    Action = "s3:PutObject"
+    Resource = [
+      "${aws_s3_bucket.s3.arn}/*",
+    ]
+    Principal = {
+      AWS = "*"
     }
-
-    actions = [
-      "s3:PutObject"
+    Condition = {
+      StringNotEquals = {
+        "s3:x-amz-server-side-encryption" = [
+          "AES256",
+          "aws:kms",
+        ]
+      }
+    }
+  }
+  deny_unencrypted_object_uploads = {
+    Sid    = "DenyUnEncryptedObjectUploads"
+    Effect = "Deny"
+    Action = "s3:PutObject"
+    Resource = [
+      "${aws_s3_bucket.s3.arn}/*",
     ]
-
-    resources = [
-      "arn:${local.partition}:s3:::${local.bucket_name}/*",
-    ]
-
-    condition {
-      test     = "StringNotEquals"
-      variable = "s3:x-amz-server-side-encryption"
-
-      values = [
-        "AES256",
-        "aws:kms"
-      ]
+    Principal = {
+      AWS = "*"
+    }
+    Condition = {
+      Null = {
+        "s3:x-amz-server-side-encryption" = "true"
+      }
     }
   }
 
-  statement {
-    sid = "DenyUnEncryptedObjectUploads"
-
-    effect = "Deny"
-
-    principals {
-      identifiers = ["*"]
-      type        = "AWS"
-    }
-
-    actions = [
-      "s3:PutObject"
+  enforce_tls_requests_only = {
+    Sid    = "EnforceTlsRequestsOnly"
+    Effect = "Deny"
+    Action = "s3:*"
+    Resource = [
+      aws_s3_bucket.s3.arn,
+      "${aws_s3_bucket.s3.arn}/*",
     ]
-
-    resources = [
-      "arn:${local.partition}:s3:::${local.bucket_name}/*",
-    ]
-
-    condition {
-      test     = "Null"
-      variable = "s3:x-amz-server-side-encryption"
-
-      values = [
-        "true"
-      ]
+    Principal = {
+      AWS = "*"
     }
-  }
-
-  statement {
-    sid = "EnforceTlsRequestsOnly"
-
-    effect = "Deny"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["*"]
-    }
-
-    actions = ["s3:*"]
-
-    resources = [
-      "arn:${local.partition}:s3:::${local.bucket_name}",
-      "arn:${local.partition}:s3:::${local.bucket_name}/*",
-    ]
-
-    condition {
-      test     = "Bool"
-      variable = "aws:SecureTransport"
-      values   = ["false"]
+    Condition = {
+      Bool = {
+        "aws:SecureTransport" = "false"
+      }
     }
   }
 }

@@ -13,3 +13,9 @@ variable "tags" {
   description = "The tags to apply to the S3 bucket"
   default     = {}
 }
+
+variable "force_destroy" {
+  type        = bool
+  description = "Whether all objects should be deleted from the bucket so that the bucket can be destroyed without error. These objects are not recoverable."
+  default     = false
+}
