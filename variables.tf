@@ -107,7 +107,10 @@ variable "acl" {
   EOF
   default     = "private"
   validation {
-    condition     = can(regex("^(private|public-read|public-read-write|aws-exec-read|authenticated-read|bucket-owner-read|bucket-owner-full-control|log-delivery-write)$", var.acl))
+    condition = contains([
+      "private", "public-read", "public-read-write", "aws-exec-read", "authenticated-read",
+      "bucket-owner-read", "bucket-owner-full-control", "log-delivery-write", ""
+    ], var.acl)
     error_message = "Invalid ACL"
   }
 }
