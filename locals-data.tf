@@ -48,6 +48,24 @@ locals {
       }
     }
   }
+  # TODO verify if needed
+  allow_mulitpart_uploads = {
+    Sid    = "AllowMulitpartUploads"
+    Effect = "Allow"
+    Action = [
+      "s3:AbortMultipartUpload",
+      "s3:DeleteObject",
+      "s3:DeleteObjectVersion",
+      "s3:GetObject",
+      "s3:GetObjectAcl",
+      "s3:GetObjectVersion",
+      "s3:GetObjectVersionAcl",
+      "s3:ListMultipartUploadParts",
+      "s3:PutObject",
+      "s3:PutObjectAcl",
+      "s3:PutObjectVersionAcl",
+    ]
+  }
   restrict_to_allowed_ips_ids = {
     Sid    = "RestrictToAllowedIPs&IDs"
     Effect = "Deny"
