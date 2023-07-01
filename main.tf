@@ -11,7 +11,3 @@ terraform {
   }
   required_version = ">= 1.5.1"
 }
-
-provider "aws" {
-  profile = "terraform-admin"
-}
