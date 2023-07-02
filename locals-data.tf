@@ -66,8 +66,67 @@ locals {
       "s3:PutObjectVersionAcl",
     ]
   }
-  restrict_to_allowed_ips_ids = {
-    Sid    = "RestrictToAllowedIPs&IDs"
+  allow_s3_list = {
+    Sid    = "AllowS3ListGet"
+    Effect = "Allow"
+    Action = [
+      "s3:ListBucket",
+    ]
+    Resource = [
+      aws_s3_bucket.s3.arn,
+    ]
+    Principal = {
+      AWS = "*"
+    }
+    Condition = {
+      StringLike = {
+        "aws:userId" = local.allowed_user_ids
+      }
+    }
+  }
+  allow_s3_get_object = {
+    Sid    = "AllowS3ListGetObject"
+    Effect = "Allow"
+    Action = [
+      "s3:GetObject"
+    ]
+    Resource = [
+      "${aws_s3_bucket.s3.arn}/*",
+    ]
+    Principal = {
+      AWS = "*"
+    }
+    Condition = {
+      StringLike = {
+        "aws:userId" = local.allowed_user_ids
+      }
+    }
+  }
+  restrict_to_allowed_ids = {
+    Sid    = "RestrictToAllowedIDs"
+    Effect = "Deny"
+    Action = "s3:*"
+    Resource = [
+      aws_s3_bucket.s3.arn,
+      "${aws_s3_bucket.s3.arn}/*",
+    ]
+    Principal = {
+      AWS = "*"
+    }
+    # NotPrincipal = {
+    #   AWS = [
+    #     "${local.caller_arn}:root",
+    #     "${local.caller_arn}:user/Administrator",
+    #   ]
+    # }
+    Condition = {
+      StringNotLike = {
+        "aws:userId" = local.allowed_user_ids
+      }
+    }
+  }
+  restrict_to_allowed_ips = length(local.allowed_ips) > 0 ? {
+    Sid    = "RestrictToAllowedIPs"
     Effect = "Deny"
     Action = "s3:*"
     Resource = [
@@ -87,11 +146,8 @@ locals {
       NotIpAddress = {
         "aws:SourceIp" = local.allowed_ips
       },
-      StringNotLike = {
-        "aws:userId" = local.allowed_user_ids
-      }
     }
-  }
+  } : null
   deny_incorrect_encryption_header = {
     Sid    = "DenyIncorrectEncryptionHeader"
     Effect = "Deny"
