@@ -17,15 +17,16 @@ resource "aws_s3_bucket_ownership_controls" "s3" {
     object_ownership = var.object_ownership
   }
 }
-resource "aws_s3_bucket_server_side_encryption_configuration" "example" {
-  bucket = aws_s3_bucket.s3.id
+module "default_encryption" {
+  source = "./modules/default_encryption"
 
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm     = var.kms_key_arn != "" ? "AES256" : "aws:kms"
-      kms_master_key_id = var.kms_key_arn == "" ? null : var.kms_key_arn
-    }
-  }
+  bucket      = aws_s3_bucket.s3.id
+  kms_key_arn = var.kms_key_arn
+}
+
+moved {
+  from = aws_s3_bucket_server_side_encryption_configuration.example
+  to   = module.default_encryption.aws_s3_bucket_server_side_encryption_configuration.this
 }
 resource "aws_s3_bucket_versioning" "versioning_example" {
   bucket = aws_s3_bucket.s3.id
