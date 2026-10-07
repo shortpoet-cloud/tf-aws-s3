@@ -16,51 +16,31 @@ resource "aws_iam_policy" "restore" {
   tags        = var.tags
 }
 
-resource "aws_iam_role" "writer" {
+module "writer_role" {
+  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role?ref=v0.1.0-rc.2"
   for_each = local.tenant_prefixes
 
-  name               = "${var.name}-${each.key}-writer"
-  assume_role_policy = jsonencode(local.identity_center_trust_policy)
-  tags               = var.tags
+  name                     = "${var.name}-${each.key}-writer"
+  identity_center_role_arn = var.identity_center_role_arn
+  policy_arns              = { writer = aws_iam_policy.writer[each.key].arn }
+  tags                     = var.tags
 }
 
-resource "aws_iam_role" "restore" {
+module "restore_role" {
+  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role?ref=v0.1.0-rc.2"
   for_each = local.tenant_prefixes
 
-  name               = "${var.name}-${each.key}-restore"
-  assume_role_policy = jsonencode(local.identity_center_trust_policy)
-  tags               = var.tags
+  name                     = "${var.name}-${each.key}-restore"
+  identity_center_role_arn = var.identity_center_role_arn
+  policy_arns              = { restore = aws_iam_policy.restore[each.key].arn }
+  tags                     = var.tags
 }
 
-resource "aws_iam_role_policy_attachment" "writer" {
+module "break_glass" {
+  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/break_glass_user?ref=v0.1.0-rc.2"
   for_each = local.tenant_prefixes
 
-  role       = aws_iam_role.writer[each.key].name
-  policy_arn = aws_iam_policy.writer[each.key].arn
-}
-
-resource "aws_iam_role_policy_attachment" "restore" {
-  for_each = local.tenant_prefixes
-
-  role       = aws_iam_role.restore[each.key].name
+  name       = "${var.name}-${each.key}-break-glass"
   policy_arn = aws_iam_policy.restore[each.key].arn
-}
-
-# Break-glass: holds only the restore policy, which is also its permissions
-# boundary, so a later attachment cannot widen it. Terraform never creates its
-# access key (aws_iam_access_key would put the secret in state); the operator
-# creates one out of band and keeps it offline.
-resource "aws_iam_user" "break_glass" {
-  for_each = local.tenant_prefixes
-
-  name                 = "${var.name}-${each.key}-break-glass"
-  permissions_boundary = aws_iam_policy.restore[each.key].arn
-  tags                 = var.tags
-}
-
-resource "aws_iam_user_policy_attachment" "break_glass" {
-  for_each = local.tenant_prefixes
-
-  user       = aws_iam_user.break_glass[each.key].name
-  policy_arn = aws_iam_policy.restore[each.key].arn
+  tags       = var.tags
 }

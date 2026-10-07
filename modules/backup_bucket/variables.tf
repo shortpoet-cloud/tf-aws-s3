@@ -37,12 +37,7 @@ variable "tenants" {
 
 variable "identity_center_role_arn" {
   type        = string
-  description = "ARN of the IAM Identity Center permission-set role that alone may assume the writer and restore roles."
-
-  validation {
-    condition     = can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/aws-reserved/sso\\.amazonaws\\.com/([a-z0-9-]+/)?AWSReservedSSO_[A-Za-z0-9+=,.@_-]+$", var.identity_center_role_arn))
-    error_message = "identity_center_role_arn must be an IAM Identity Center permission-set role (role/aws-reserved/sso.amazonaws.com/.../AWSReservedSSO_...)."
-  }
+  description = "ARN of the IAM Identity Center permission-set role that alone may assume the writer and restore roles. tf-iam's identity_center_role validates it."
 }
 
 variable "kms_key_arn" {

@@ -10,24 +10,11 @@ variables {
 run "bucket_protections" {
   command = plan
 
+  # Ownership, public-access blocks and versioning are bucket_baseline's,
+  # tested there; this checks the backup bucket takes the private, versioned defaults.
   assert {
-    condition     = one(aws_s3_bucket_versioning.this.versioning_configuration).status == "Enabled"
-    error_message = "Versioning must be enabled."
-  }
-
-  assert {
-    condition = alltrue([
-      aws_s3_bucket_public_access_block.this.block_public_acls,
-      aws_s3_bucket_public_access_block.this.block_public_policy,
-      aws_s3_bucket_public_access_block.this.ignore_public_acls,
-      aws_s3_bucket_public_access_block.this.restrict_public_buckets,
-    ])
-    error_message = "All public access must be blocked."
-  }
-
-  assert {
-    condition     = one(aws_s3_bucket_ownership_controls.this.rule).object_ownership == "BucketOwnerEnforced"
-    error_message = "Ownership must be BucketOwnerEnforced (ACLs disabled)."
+    condition     = module.bucket_baseline.versioning_enabled && !module.bucket_baseline.allow_public_policy
+    error_message = "The backup bucket must be versioned and fully private."
   }
 
   assert {
@@ -53,7 +40,7 @@ run "encryption_sse_s3_by_default" {
   command = plan
 
   assert {
-    condition     = module.default_encryption.sse_algorithm == "AES256"
+    condition     = module.bucket_baseline.sse_algorithm == "AES256"
     error_message = "Without a KMS key the bucket must use SSE-S3."
   }
 
@@ -71,7 +58,7 @@ run "encryption_sse_kms_with_key" {
   }
 
   assert {
-    condition     = module.default_encryption.sse_algorithm == "aws:kms"
+    condition     = module.bucket_baseline.sse_algorithm == "aws:kms"
     error_message = "With a KMS key the bucket must use SSE-KMS."
   }
 

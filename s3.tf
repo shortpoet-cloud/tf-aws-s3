@@ -1,100 +1,63 @@
 resource "aws_s3_bucket" "s3" {
-  # With account id, this S3 bucket names can be *globally* unique.
-  bucket = local.bucket_name
-
+  bucket        = local.bucket_name
   force_destroy = var.force_destroy
-  # Enable versioning so we can see the full revision history of our
-  # state files
-  # Enable server-side encryption by default
-
-  tags = local.tags
+  tags          = local.tags
 }
 
-resource "aws_s3_bucket_ownership_controls" "s3" {
-  bucket = aws_s3_bucket.s3.id
+module "bucket_baseline" {
+  source = "./modules/bucket_baseline"
 
-  rule {
-    object_ownership = var.object_ownership
-  }
+  bucket              = aws_s3_bucket.s3.id
+  kms_key_arn         = var.kms_key_arn
+  versioning_enabled  = var.versioning_enabled
+  allow_public_policy = var.allow_public_policy
 }
-module "default_encryption" {
-  source = "./modules/default_encryption"
 
-  bucket      = aws_s3_bucket.s3.id
-  kms_key_arn = var.kms_key_arn
+moved {
+  from = aws_s3_bucket_ownership_controls.s3
+  to   = module.bucket_baseline.aws_s3_bucket_ownership_controls.this
+}
+
+moved {
+  from = aws_s3_bucket_public_access_block.s3
+  to   = module.bucket_baseline.aws_s3_bucket_public_access_block.this
+}
+
+moved {
+  from = aws_s3_bucket_versioning.versioning_example
+  to   = module.bucket_baseline.aws_s3_bucket_versioning.this
 }
 
 moved {
   from = aws_s3_bucket_server_side_encryption_configuration.example
-  to   = module.default_encryption.aws_s3_bucket_server_side_encryption_configuration.this
+  to   = module.bucket_baseline.aws_s3_bucket_server_side_encryption_configuration.this
 }
-resource "aws_s3_bucket_versioning" "versioning_example" {
-  bucket = aws_s3_bucket.s3.id
-  versioning_configuration {
-    status = var.versioning_enabled ? "Enabled" : "Disabled"
-    # mfa_delete = var.versioning_mfa_delete_enabled ? "Enabled" : "Disabled"
+
+# Ownership is BucketOwnerEnforced, so ACLs no longer apply. The old ACL
+# resource also failed with default inputs (acl and access_control_policy
+# both set). Forget it without touching the bucket.
+removed {
+  from = aws_s3_bucket_acl.s3
+
+  lifecycle {
+    destroy = false
   }
-}
-resource "aws_s3_bucket_public_access_block" "s3" {
-  bucket = aws_s3_bucket_ownership_controls.s3.id
-
-  block_public_acls       = var.block_public_acls
-  block_public_policy     = var.block_public_policy
-  ignore_public_acls      = var.ignore_public_acls
-  restrict_public_buckets = var.restrict_public_buckets
-}
-
-resource "aws_s3_bucket_acl" "s3" {
-  count  = var.block_public_acls || var.block_public_policy || var.ignore_public_acls || var.restrict_public_buckets ? 0 : 1
-  bucket = aws_s3_bucket_ownership_controls.s3.id
-
-  acl = var.owner_id == "" ? var.acl : null
-
-  access_control_policy {
-    # grant {
-    #   grantee {
-    #     type = "Group"
-    #     uri  = "http://acs.amazonaws.com/groups/global/AllUsers"
-    #   }
-    #   permission = "READ"
-    # }
-
-    grant {
-      grantee {
-        id   = var.owner_id
-        type = "CanonicalUser"
-      }
-      permission = "FULL_CONTROL"
-    }
-
-    # grant {
-    #   grantee {
-    #     type = "Group"
-    #     uri  = "http://acs.amazonaws.com/groups/s3/LogDelivery"
-    #   }
-    #   permission = "READ_ACP"
-    # }
-
-    owner {
-      id = var.owner_id
-    }
-  }
-
 }
 
 resource "aws_s3_bucket_policy" "s3" {
-  bucket = aws_s3_bucket_ownership_controls.s3.id
+  bucket = aws_s3_bucket.s3.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [for s in [
+    Statement = [
       local.public_read_get_object,
       local.deny_incorrect_encryption_header,
       local.deny_unencrypted_object_uploads,
       local.enforce_tls_requests_only,
       local.allow_s3_list,
       local.allow_s3_get_object,
-    ] : s if s != null]
+    ]
   })
 
+  depends_on = [module.bucket_baseline]
 }

@@ -90,13 +90,10 @@ run "restore_is_isolated_per_tenant" {
 run "break_glass_holds_only_restore" {
   command = plan
 
+  # tf-iam's break_glass_user makes its one policy its boundary too.
   assert {
-    condition = alltrue([
-      for tenant in var.tenants :
-      aws_iam_user_policy_attachment.break_glass[tenant].policy_arn == "arn:aws:iam::111122223333:policy/restore"
-      && aws_iam_user.break_glass[tenant].permissions_boundary == "arn:aws:iam::111122223333:policy/restore"
-    ])
-    error_message = "Break-glass must hold the restore policy, bounded by it."
+    condition     = alltrue([for tenant in var.tenants : module.break_glass[tenant].policy_arn == "arn:aws:iam::111122223333:policy/restore"])
+    error_message = "Break-glass must hold only the restore policy."
   }
 
   assert {
@@ -111,35 +108,18 @@ run "break_glass_holds_only_restore" {
   }
 }
 
-run "roles_trust_only_the_identity_center_role" {
+run "roles_carry_only_their_own_policy" {
   command = plan
 
+  # Trust (Identity Center role only) is tf-iam identity_center_role's, tested there.
   assert {
     condition = alltrue([
-      for role in concat(values(aws_iam_role.writer), values(aws_iam_role.restore)) :
-      jsondecode(role.assume_role_policy) == {
-        Version = "2012-10-17"
-        Statement = [{
-          Sid       = "IdentityCenterPermissionSetOnly"
-          Effect    = "Allow"
-          Principal = { AWS = "arn:aws:iam::111122223333:root" }
-          Action    = "sts:AssumeRole"
-          Condition = { ArnEquals = { "aws:PrincipalArn" = var.identity_center_role_arn } }
-        }]
-      }
+      for tenant in var.tenants :
+      module.writer_role[tenant].policy_arns == tomap({ writer = "arn:aws:iam::111122223333:policy/writer" })
+      && module.restore_role[tenant].policy_arns == tomap({ restore = "arn:aws:iam::111122223333:policy/restore" })
     ])
-    error_message = "Writer and restore roles must trust only the Identity Center permission-set role."
+    error_message = "Each role must carry only its own policy."
   }
-}
-
-run "rejects_a_non_identity_center_role" {
-  command = plan
-
-  variables {
-    identity_center_role_arn = "arn:aws:iam::111122223333:role/terraform-admin"
-  }
-
-  expect_failures = [var.identity_center_role_arn]
 }
 
 run "rejects_a_wildcard_tenant" {
