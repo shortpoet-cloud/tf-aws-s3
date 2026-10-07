@@ -88,8 +88,6 @@ resource "aws_s3_bucket_policy" "s3" {
     Version = "2012-10-17"
     Statement = [for s in [
       local.public_read_get_object,
-      # local.restrict_to_allowed_ids,
-      # local.restrict_to_allowed_ips,
       local.deny_incorrect_encryption_header,
       local.deny_unencrypted_object_uploads,
       local.enforce_tls_requests_only,
