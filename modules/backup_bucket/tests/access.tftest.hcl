@@ -56,14 +56,14 @@ run "restore_is_isolated_per_tenant" {
   assert {
     condition = alltrue([
       for tenant in var.tenants :
-      [for statement in jsondecode(aws_iam_policy.restore[tenant].policy).Statement : statement.Action] == [["s3:ListBucket"], ["s3:GetObject", "s3:GetObjectVersion"]]
+      [for statement in jsondecode(aws_iam_policy.restore[tenant].policy).Statement : statement.Action] == [["s3:ListBucket", "s3:ListBucketVersions"], ["s3:GetObject", "s3:GetObjectVersion"]]
     ])
-    error_message = "The restore role may only list, get and get-version."
+    error_message = "The restore role may only list objects, list versions, get and get-version."
   }
 
   # Every object pattern and list prefix granted to one tenant, with its
   # trailing wildcard removed, must not be a prefix of any other tenant's keys. The
-  # bucket ARN itself (ListBucket) is covered by the s3:prefix check.
+  # bucket ARN itself (ListBucket, ListBucketVersions) is covered by the s3:prefix check.
   assert {
     condition = alltrue(flatten([
       for owner in var.tenants : [
@@ -75,7 +75,7 @@ run "restore_is_isolated_per_tenant" {
         ]
       ]
     ]))
-    error_message = "A tenant's restore role must be denied list, get and get-version on every other tenant's prefix."
+    error_message = "A tenant's restore role must be denied list, list-versions, get and get-version on every other tenant's prefix."
   }
 
   assert {
@@ -83,7 +83,34 @@ run "restore_is_isolated_per_tenant" {
       for tenant in var.tenants :
       jsondecode(aws_iam_policy.restore[tenant].policy).Statement[0].Condition.StringLike["s3:prefix"] == ["${tenant}/*"]
     ])
-    error_message = "ListBucket must be conditioned on the tenant's own prefix."
+    error_message = "ListBucket and ListBucketVersions must be conditioned on the tenant's own prefix."
+  }
+}
+
+# Restore finds an older good copy by listing versions, so that listing must
+# stay inside the tenant's prefix like ListBucket does.
+run "version_listing_is_isolated_per_tenant" {
+  command = plan
+
+  assert {
+    condition = alltrue(flatten([
+      for owner in var.tenants : [
+        for statement in jsondecode(aws_iam_policy.restore[owner].policy).Statement : [
+          for other in setsubtract(var.tenants, [owner]) : [
+            for prefix in try(statement.Condition.StringLike["s3:prefix"], [""]) : !startswith("${other}/key", trimsuffix(prefix, "*"))
+          ]
+        ] if contains(statement.Action, "s3:ListBucketVersions")
+      ]
+    ]))
+    error_message = "A tenant's restore role must be denied listing versions under every other tenant's prefix, and never list versions unconditioned."
+  }
+
+  assert {
+    condition = alltrue([
+      for tenant in var.tenants :
+      length([for statement in jsondecode(aws_iam_policy.restore[tenant].policy).Statement : statement if contains(statement.Action, "s3:ListBucketVersions")]) == 1
+    ])
+    error_message = "Each restore role must be able to list its own object versions."
   }
 }
 

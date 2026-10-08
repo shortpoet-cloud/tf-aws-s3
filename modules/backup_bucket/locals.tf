@@ -55,7 +55,7 @@ locals {
         {
           Sid       = "ListTenantPrefix"
           Effect    = "Allow"
-          Action    = ["s3:ListBucket"]
+          Action    = ["s3:ListBucket", "s3:ListBucketVersions"]
           Resource  = [local.bucket_arn]
           Condition = { StringLike = { "s3:prefix" = ["${prefix}*"] } }
         },

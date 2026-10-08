@@ -5,10 +5,11 @@ A versioned, private S3 bucket for credential backups, with per-tenant IAM acces
 - **Bucket:** `bucket_baseline` (versioning on; SSE-S3 by default, SSE-KMS when `kms_key_arn` is set; all public access blocked; `BucketOwnerEnforced`), plus a TLS-only bucket policy, no `force_destroy` and `prevent_destroy`. Object Lock is off; enabling it later is the owner's retention decision.
 - **Per tenant** (key prefix `<tenant>/`):
   - **writer** role: `s3:PutObject` under the prefix only. No delete, delete-version, read, list, lifecycle, policy or ACL actions.
-  - **restore** role: `s3:ListBucket` conditioned on `s3:prefix` = `<tenant>/*`, plus `s3:GetObject` and `s3:GetObjectVersion` under the prefix.
+  - **restore** role: `s3:ListBucket` and `s3:ListBucketVersions` conditioned on `s3:prefix` = `<tenant>/*`, plus `s3:GetObject` and `s3:GetObjectVersion` under the prefix.
   - Both roles are `tf-iam` `identity_center_role`s: only `identity_center_role_arn`, an IAM Identity Center permission-set role, may assume them (MFA is enforced at Identity Center sign-in).
   - **break-glass**: a `tf-iam` `break_glass_user` holding only the restore policy, which is also its boundary. No access key is created; the operator creates one out of band and keeps it offline.
 - With SSE-KMS, the writer gets `kms:GenerateDataKey` and `kms:Decrypt` (multipart completion), and the restore role `kms:Decrypt`, each only via S3 and only for the tenant's object ARNs.
+- **Keep S3 Bucket Keys off with SSE-KMS.** The tenant KMS condition keys on `kms:EncryptionContext:aws:s3:arn` per object. Bucket Keys change that context to the bucket ARN, which would break every writer and restore role.
 
 ## Usage
 
