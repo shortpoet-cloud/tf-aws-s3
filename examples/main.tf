@@ -45,7 +45,6 @@ locals {
     data.publicip_address.source_v4.ip,
     data.publicip_address.source_v6.ip,
   ]
-  # allowed_ips = var.allowed_ips
   allowed_user_ids = [
     data.aws_iam_user.admin.user_id,
     "${data.aws_iam_role.terraform_admin.unique_id}:*",
