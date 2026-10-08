@@ -28,7 +28,7 @@ run "private_versioned_sse_s3_by_default" {
   }
 
   assert {
-    condition     = one(aws_s3_bucket_versioning.this.versioning_configuration).status == "Enabled"
+    condition     = length(aws_s3_bucket_versioning.disabled) == 0 && one(one(aws_s3_bucket_versioning.enabled).versioning_configuration).status == "Enabled"
     error_message = "Versioning must be enabled by default."
   }
 }
@@ -70,7 +70,7 @@ run "website_allows_a_public_policy_but_never_public_acls" {
   }
 
   assert {
-    condition     = one(aws_s3_bucket_versioning.this.versioning_configuration).status == "Disabled"
+    condition     = length(aws_s3_bucket_versioning.enabled) == 0 && one(one(aws_s3_bucket_versioning.disabled).versioning_configuration).status == "Disabled"
     error_message = "versioning_enabled = false must leave the bucket unversioned."
   }
 }

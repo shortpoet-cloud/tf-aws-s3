@@ -2,6 +2,8 @@
 
 Ownership, public-access block, versioning and default encryption for an existing bucket. ACLs are always disabled and public ACLs always blocked; `allow_public_policy` admits a public bucket policy for website buckets.
 
+With `versioning_enabled = true`, the versioning resource has `prevent_destroy`: removing this module call, or turning versioning off, would otherwise suspend versioning on a bucket that stays. With `false`, the Disabled resource is unguarded, so a website bucket can still be torn down.
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -27,7 +29,8 @@ No modules.
 | [aws_s3_bucket_ownership_controls.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_ownership_controls) | resource |
 | [aws_s3_bucket_public_access_block.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block) | resource |
 | [aws_s3_bucket_server_side_encryption_configuration.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_server_side_encryption_configuration) | resource |
-| [aws_s3_bucket_versioning.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
+| [aws_s3_bucket_versioning.disabled](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
+| [aws_s3_bucket_versioning.enabled](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
 
 ## Inputs
 

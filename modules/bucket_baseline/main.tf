@@ -31,11 +31,28 @@ resource "aws_s3_bucket_public_access_block" "this" {
   restrict_public_buckets = !var.allow_public_policy
 }
 
-resource "aws_s3_bucket_versioning" "this" {
+# Destroying an Enabled versioning resource suspends versioning on a bucket that
+# stays, so the versioned case is guarded. A never-versioned website bucket keeps
+# an unguarded Disabled resource, so its teardown still works.
+resource "aws_s3_bucket_versioning" "enabled" {
+  count  = var.versioning_enabled ? 1 : 0
   bucket = var.bucket
 
   versioning_configuration {
-    status = var.versioning_enabled ? "Enabled" : "Disabled"
+    status = "Enabled"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_s3_bucket_versioning" "disabled" {
+  count  = var.versioning_enabled ? 0 : 1
+  bucket = var.bucket
+
+  versioning_configuration {
+    status = "Disabled"
   }
 }
 

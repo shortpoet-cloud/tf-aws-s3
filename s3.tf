@@ -25,7 +25,7 @@ moved {
 
 moved {
   from = aws_s3_bucket_versioning.versioning_example
-  to   = module.bucket_baseline.aws_s3_bucket_versioning.this
+  to   = module.bucket_baseline.aws_s3_bucket_versioning.enabled[0]
 }
 
 moved {
