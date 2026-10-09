@@ -29,5 +29,6 @@ output "s3_bucket_id" {
 # }
 
 output "tags" {
-  value = aws_s3_bucket.s3.tags
+  description = "Tags applied to the S3 bucket"
+  value       = aws_s3_bucket.s3.tags
 }

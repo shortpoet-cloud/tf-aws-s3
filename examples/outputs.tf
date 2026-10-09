@@ -29,5 +29,6 @@ output "s3_bucket_id" {
 # }
 
 output "tags" {
-  value = module.s3_example.tags
+  description = "The tags applied to the example bucket."
+  value       = module.s3_example.tags
 }

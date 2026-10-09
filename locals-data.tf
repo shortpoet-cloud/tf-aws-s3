@@ -1,12 +1,4 @@
-data "aws_caller_identity" "current" {}
-data "aws_partition" "current" {}
-data "aws_region" "current" {}
-
 locals {
-
-  account_id  = data.aws_caller_identity.current.account_id
-  partition   = data.aws_partition.current.partition
-  region      = data.aws_region.current.name
   bucket_name = var.bucket_name
 
   tags = merge(
@@ -48,24 +40,6 @@ locals {
       }
     }
   }
-  # TODO verify if needed
-  allow_mulitpart_uploads = {
-    Sid    = "AllowMulitpartUploads"
-    Effect = "Allow"
-    Action = [
-      "s3:AbortMultipartUpload",
-      "s3:DeleteObject",
-      "s3:DeleteObjectVersion",
-      "s3:GetObject",
-      "s3:GetObjectAcl",
-      "s3:GetObjectVersion",
-      "s3:GetObjectVersionAcl",
-      "s3:ListMultipartUploadParts",
-      "s3:PutObject",
-      "s3:PutObjectAcl",
-      "s3:PutObjectVersionAcl",
-    ]
-  }
   allow_s3_list = {
     Sid    = "AllowS3ListGet"
     Effect = "Allow"
@@ -102,52 +76,6 @@ locals {
       }
     }
   }
-  restrict_to_allowed_ids = {
-    Sid    = "RestrictToAllowedIDs"
-    Effect = "Deny"
-    Action = "s3:*"
-    Resource = [
-      aws_s3_bucket.s3.arn,
-      "${aws_s3_bucket.s3.arn}/*",
-    ]
-    Principal = {
-      AWS = "*"
-    }
-    # NotPrincipal = {
-    #   AWS = [
-    #     "${local.caller_arn}:root",
-    #     "${local.caller_arn}:user/Administrator",
-    #   ]
-    # }
-    Condition = {
-      StringNotLike = {
-        "aws:userId" = local.allowed_user_ids
-      }
-    }
-  }
-  restrict_to_allowed_ips = length(local.allowed_ips) > 0 ? {
-    Sid    = "RestrictToAllowedIPs"
-    Effect = "Deny"
-    Action = "s3:*"
-    Resource = [
-      aws_s3_bucket.s3.arn,
-      "${aws_s3_bucket.s3.arn}/*",
-    ]
-    Principal = {
-      AWS = "*"
-    }
-    # NotPrincipal = {
-    #   AWS = [
-    #     "${local.caller_arn}:root",
-    #     "${local.caller_arn}:user/Administrator",
-    #   ]
-    # }
-    Condition = {
-      NotIpAddress = {
-        "aws:SourceIp" = local.allowed_ips
-      },
-    }
-  } : null
   deny_incorrect_encryption_header = {
     Sid    = "DenyIncorrectEncryptionHeader"
     Effect = "Deny"
