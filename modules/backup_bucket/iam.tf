@@ -17,7 +17,7 @@ resource "aws_iam_policy" "restore" {
 }
 
 module "writer_role" {
-  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role?ref=v0.1.0-rc.3"
+  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role?ref=ce412e55a7389ff56026e4a4dd4c0e1a1063150c" # v0.1.0
   for_each = local.tenant_prefixes
 
   name                     = "${var.name}-${each.key}-writer"
@@ -27,7 +27,7 @@ module "writer_role" {
 }
 
 module "restore_role" {
-  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role?ref=v0.1.0-rc.3"
+  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role?ref=ce412e55a7389ff56026e4a4dd4c0e1a1063150c" # v0.1.0
   for_each = local.tenant_prefixes
 
   name                     = "${var.name}-${each.key}-restore"
@@ -37,7 +37,7 @@ module "restore_role" {
 }
 
 module "break_glass" {
-  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/break_glass_user?ref=v0.1.0-rc.3"
+  source   = "git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/break_glass_user?ref=ce412e55a7389ff56026e4a4dd4c0e1a1063150c" # v0.1.0
   for_each = local.tenant_prefixes
 
   name       = "${var.name}-${each.key}-break-glass"

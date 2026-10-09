@@ -46,10 +46,10 @@ module "credential_backup" {
 
 | Name | Source | Version |
 | ---- | ------ | ------- |
-| <a name="module_break_glass"></a> [break\_glass](#module\_break\_glass) | git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/break_glass_user | v0.1.0-rc.2 |
+| <a name="module_break_glass"></a> [break\_glass](#module\_break\_glass) | git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/break_glass_user | ce412e55a7389ff56026e4a4dd4c0e1a1063150c |
 | <a name="module_bucket_baseline"></a> [bucket\_baseline](#module\_bucket\_baseline) | ../bucket_baseline | n/a |
-| <a name="module_restore_role"></a> [restore\_role](#module\_restore\_role) | git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role | v0.1.0-rc.2 |
-| <a name="module_writer_role"></a> [writer\_role](#module\_writer\_role) | git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role | v0.1.0-rc.2 |
+| <a name="module_restore_role"></a> [restore\_role](#module\_restore\_role) | git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role | ce412e55a7389ff56026e4a4dd4c0e1a1063150c |
+| <a name="module_writer_role"></a> [writer\_role](#module\_writer\_role) | git::ssh://git@github.com/shortpoet-cloud/tf-iam.git//modules/identity_center_role | ce412e55a7389ff56026e4a4dd4c0e1a1063150c |
 
 ## Resources
 

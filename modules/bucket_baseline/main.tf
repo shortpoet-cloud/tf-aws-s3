@@ -32,8 +32,9 @@ resource "aws_s3_bucket_public_access_block" "this" {
 }
 
 # Destroying an Enabled versioning resource suspends versioning on a bucket that
-# stays, so the versioned case is guarded. A never-versioned website bucket keeps
-# an unguarded Disabled resource, so its teardown still works.
+# stays, so the versioned case is guarded while this module is called. Removing
+# the call drops the guard too; see README.md. A never-versioned website bucket
+# keeps an unguarded Disabled resource, so its teardown still works.
 resource "aws_s3_bucket_versioning" "enabled" {
   count  = var.versioning_enabled ? 1 : 0
   bucket = var.bucket

@@ -2,7 +2,22 @@
 
 Ownership, public-access block, versioning and default encryption for an existing bucket. ACLs are always disabled and public ACLs always blocked; `allow_public_policy` admits a public bucket policy for website buckets.
 
-With `versioning_enabled = true`, the versioning resource has `prevent_destroy`: removing this module call, or turning versioning off, would otherwise suspend versioning on a bucket that stays. With `false`, the Disabled resource is unguarded, so a website bucket can still be torn down.
+With `versioning_enabled = true`, the versioning resource has `prevent_destroy`. While the module call stays, a plan that would destroy it (turning `versioning_enabled` off, or a change that replaces it) fails. With `false`, the Disabled resource is unguarded, so a website bucket can still be torn down.
+
+**Removing the whole module call is not guarded.** `prevent_destroy` lives in this module's configuration, so once the call is gone Terraform plans the destroy without it, and destroying Enabled versioning suspends versioning on a bucket that stays. To retire the module while keeping the bucket's settings, replace the call with:
+
+```hcl
+removed {
+  from = module.baseline # the caller's module name
+
+  lifecycle {
+    destroy = false
+  }
+}
+```
+
+That forgets the module's resources without changing the bucket.
+
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
