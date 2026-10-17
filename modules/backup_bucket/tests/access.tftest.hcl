@@ -158,3 +158,28 @@ run "rejects_a_wildcard_tenant" {
 
   expect_failures = [var.tenants]
 }
+
+# credential-backup-<34 characters>-break-glass is exactly 64 characters.
+run "accepts_a_tenant_up_to_the_iam_name_limit" {
+  command = plan
+
+  variables {
+    tenants = ["thinkpad-host-backup", "abcdefghij-abcdefghij-abcdefghij-a"]
+  }
+
+  assert {
+    condition     = module.writer_role["thinkpad-host-backup"].name == "credential-backup-thinkpad-host-backup-writer"
+    error_message = "A tenant longer than 16 characters names its roles in full."
+  }
+}
+
+# credential-backup-<35 characters>-break-glass is 65 characters, one over IAM's limit.
+run "rejects_a_tenant_whose_break_glass_name_exceeds_64_characters" {
+  command = plan
+
+  variables {
+    tenants = ["abcdefghij-abcdefghij-abcdefghij-ab"]
+  }
+
+  expect_failures = [var.tenants]
+}
