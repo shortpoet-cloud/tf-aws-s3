@@ -7,6 +7,8 @@ locals {
   tenant_prefixes = { for tenant in var.tenants : tenant => "${tenant}/" }
   kms_key_given   = var.kms_key_arn != ""
 
+  abort_incomplete_multipart_uploads_rule_id = "abort-incomplete-multipart-uploads"
+
   # SSE-KMS needs key access scoped to the tenant's objects, and only through S3.
   # GenerateDataKey encrypts a put; Decrypt serves multipart completion and reads.
   tenant_kms_condition = {

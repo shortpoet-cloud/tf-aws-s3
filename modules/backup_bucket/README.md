@@ -3,6 +3,10 @@
 A versioned, private S3 bucket for credential backups, with per-tenant IAM access.
 
 - **Bucket:** `bucket_baseline` (versioning on; SSE-S3 by default, SSE-KMS when `kms_key_arn` is set; all public access blocked; `BucketOwnerEnforced`), plus a TLS-only bucket policy, no `force_destroy` and `prevent_destroy`. Object Lock is off; enabling it later is the owner's retention decision.
+- **Lifecycle:**
+  - Incomplete multipart uploads are aborted after 7 days, bucket-wide. The writer can't abort its own failed uploads.
+  - `noncurrent_version_retention` adds one rule per entry. Each rule expires noncurrent versions under a prefix inside one tenant: a version goes once it has been noncurrent for `noncurrent_days` and `newer_noncurrent_versions` newer versions of its key exist. The count is per key. Current versions never expire.
+  - Without retention rules, every version is kept. These rules are the only way history is deleted: no role this module creates can delete a version, and only an admin can change lifecycle configuration.
 - **Per tenant** (key prefix `<tenant>/`):
   - **writer** role: `s3:PutObject` under the prefix only. No delete, delete-version, read, list, lifecycle, policy or ACL actions.
   - **restore** role: `s3:ListBucket` and `s3:ListBucketVersions` conditioned on `s3:prefix` = `<tenant>/*`, plus `s3:GetObject` and `s3:GetObjectVersion` under the prefix.
@@ -15,12 +19,20 @@ A versioned, private S3 bucket for credential backups, with per-tenant IAM acces
 
 ```hcl
 module "credential_backup" {
-  source = "git::ssh://git@github.com/shortpoet-cloud/tf-aws-s3.git//modules/backup_bucket?ref=v0.1.0"
+  source = "git::ssh://git@github.com/shortpoet-cloud/tf-aws-s3.git//modules/backup_bucket?ref=v0.2.0"
 
   bucket_name              = "credential-backup-111122223333"
   name                     = "credential-backup"
   tenants                  = ["personal", "work"]
   identity_center_role_arn = "arn:aws:iam::111122223333:role/aws-reserved/sso.amazonaws.com/us-east-1/AWSReservedSSO_CredentialBackup_0123456789abcdef"
+
+  noncurrent_version_retention = {
+    work-snapshots = {
+      prefix                    = "work/snapshots/"
+      noncurrent_days           = 30
+      newer_noncurrent_versions = 7
+    }
+  }
 }
 ```
 
@@ -58,6 +70,7 @@ module "credential_backup" {
 | [aws_iam_policy.restore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [aws_iam_policy.writer](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [aws_s3_bucket.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
+| [aws_s3_bucket_lifecycle_configuration.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_lifecycle_configuration) | resource |
 | [aws_s3_bucket_policy.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_policy) | resource |
 
 ## Inputs
@@ -68,6 +81,7 @@ module "credential_backup" {
 | <a name="input_identity_center_role_arn"></a> [identity\_center\_role\_arn](#input\_identity\_center\_role\_arn) | ARN of the IAM Identity Center permission-set role that alone may assume the writer and restore roles. tf-iam's identity\_center\_role validates it. | `string` | n/a | yes |
 | <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | ARN of a KMS key for SSE-KMS. Empty selects SSE-S3 (AES256). | `string` | `""` | no |
 | <a name="input_name"></a> [name](#input\_name) | Prefix for the IAM role, policy and user names (<name>-<tenant>-<purpose>). | `string` | n/a | yes |
+| <a name="input_noncurrent_version_retention"></a> [noncurrent\_version\_retention](#input\_noncurrent\_version\_retention) | Lifecycle rules, keyed by rule id, that expire noncurrent versions under a prefix inside one tenant. A version expires once it has been noncurrent for noncurrent\_days and newer\_noncurrent\_versions newer noncurrent versions of its key exist. Empty keeps every version. | <pre>map(object({<br/>    prefix                    = string<br/>    noncurrent_days           = number<br/>    newer_noncurrent_versions = number<br/>  }))</pre> | `{}` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags applied to every taggable resource. | `map(string)` | `{}` | no |
 | <a name="input_tenants"></a> [tenants](#input\_tenants) | Tenant ids. Each tenant owns the key prefix <tenant>/ and gets its own writer role, restore role and break-glass user. | `set(string)` | n/a | yes |
 
