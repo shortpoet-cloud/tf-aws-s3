@@ -30,8 +30,15 @@ variable "tenants" {
   # The tenant id becomes an IAM resource pattern and an s3:prefix condition,
   # so it must not carry wildcard or path characters that would widen either.
   validation {
-    condition     = alltrue([for tenant in var.tenants : can(regex("^[a-z0-9][a-z0-9-]{0,15}$", tenant))])
-    error_message = "Each tenant must be 1-16 lowercase letters, digits or hyphens, starting with a letter or digit."
+    condition     = alltrue([for tenant in var.tenants : can(regex("^[a-z0-9][a-z0-9-]*$", tenant))])
+    error_message = "Each tenant must be lowercase letters, digits or hyphens, starting with a letter or digit."
+  }
+
+  # The longest IAM name built from a tenant is the break-glass user,
+  # <name>-<tenant>-break-glass, and IAM user and role names stop at 64.
+  validation {
+    condition     = alltrue([for tenant in var.tenants : length("${var.name}-${tenant}-break-glass") <= 64])
+    error_message = "Each tenant must keep <name>-<tenant>-break-glass within IAM's 64-character name limit."
   }
 }
 
