@@ -53,6 +53,48 @@ variable "kms_key_arn" {
   default     = ""
 }
 
+variable "noncurrent_version_retention" {
+  type = map(object({
+    prefix                    = string
+    noncurrent_days           = number
+    newer_noncurrent_versions = number
+  }))
+  description = "Lifecycle rules, keyed by rule id, that expire noncurrent versions under a prefix inside one tenant. A version expires once it has been noncurrent for noncurrent_days and newer_noncurrent_versions newer noncurrent versions of its key exist. Empty keeps every version."
+  default     = {}
+
+  # A prefix outside every tenant, or one that stops short of the tenant's
+  # trailing slash, would expire another tenant's history.
+  validation {
+    condition = alltrue([
+      for rule in values(var.noncurrent_version_retention) :
+      anytrue([for tenant in var.tenants : startswith(rule.prefix, "${tenant}/")])
+    ])
+    error_message = "Each rule's prefix must start with a declared tenant's prefix, <tenant>/."
+  }
+
+  validation {
+    condition = alltrue([
+      for rule in values(var.noncurrent_version_retention) :
+      rule.noncurrent_days >= 1 && floor(rule.noncurrent_days) == rule.noncurrent_days
+    ])
+    error_message = "noncurrent_days must be a whole number of at least 1."
+  }
+
+  # S3 keeps at most 100 newer noncurrent versions in a rule.
+  validation {
+    condition = alltrue([
+      for rule in values(var.noncurrent_version_retention) :
+      rule.newer_noncurrent_versions >= 1 && rule.newer_noncurrent_versions <= 100 && floor(rule.newer_noncurrent_versions) == rule.newer_noncurrent_versions
+    ])
+    error_message = "newer_noncurrent_versions must be a whole number from 1 to 100."
+  }
+
+  validation {
+    condition     = !contains(keys(var.noncurrent_version_retention), local.abort_incomplete_multipart_uploads_rule_id)
+    error_message = "The rule id abort-incomplete-multipart-uploads is the module's own."
+  }
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags applied to every taggable resource."
